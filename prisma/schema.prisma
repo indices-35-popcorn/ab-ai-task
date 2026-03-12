@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppealCategory {
+  CHANGE_PROVIDER
+}
+
+enum AppealStatus {
+  OPEN
+  RESOLVED
+}
+
+enum EnrollmentStatus {
+  APPROVED
+  PENDING
+  CANCELLED
+}
+
+model Appeal {
+  id        String        @id @default(uuid())
+  category  AppealCategory
+  status    AppealStatus  @default(OPEN)
+  message   String
+  children  AppealChild[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model AppealChild {
+  id        String @id @default(uuid())
+  appealId  String
+  childIin  String
+  childName String
+  appeal     Appeal @relation(fields: [appealId], references: [id], onDelete: Cascade)
+
+  @@index([appealId])
+  @@index([childIin])
+}
+
+model User {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  enrollments Enrollment[]
+}
+
+model AthleteProfile {
+  id          String       @id @default(uuid())
+  iin         String       @unique
+  enrollments Enrollment[]
+}
+
+model SportsCenter {
+  id        String                @id @default(uuid())
+  name      String
+  programs  SportsCenterProgram[]
+  enrollments Enrollment[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+}
+
+model SportsCenterProgram {
+  id             String       @id @default(uuid())
+  sportsCenterId String
+  sportType      String
+  capacity       Int
+  sportsCenter   SportsCenter @relation(fields: [sportsCenterId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
+
+  @@index([sportsCenterId, sportType])
+}
+
+model Enrollment {
+  id               String           @id @default(uuid())
+  athleteProfileId String
+  sportsCenterId   String
+  programId        String
+  parentId         String
+  status           EnrollmentStatus
+  athleteProfile   AthleteProfile   @relation(fields: [athleteProfileId], references: [id], onDelete: Cascade)
+  sportsCenter     SportsCenter     @relation(fields: [sportsCenterId], references: [id], onDelete: Cascade)
+  program          SportsCenterProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  parent           User             @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([athleteProfileId, status])
+  @@index([sportsCenterId])
+  @@index([programId])
+}
